@@ -3,7 +3,6 @@ Contributors: Nachi
 */
 package redis.clients.jedis;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,33 +10,42 @@ import redis.clients.jedis.Jedis;
 
 public class ThreadSafeJedis{
 
-	JedisPool objectPool;
-	JedisPoolConfig poolConfig;
+	private static final int DEFAULT_SOCKET_TIMEOUT = 0;
+	private static final int DEFAULT_MAX_CLIENTS = 50;
+	protected JedisPool objectPool;
 
 	public ThreadSafeJedis(String host, int port) {
-		objectPool = new JedisPool(host, port);
+		objectPool = new JedisPool(getDefaultConfig(), host, port, DEFAULT_SOCKET_TIMEOUT);
 	}
 
+	public ThreadSafeJedis(String host, int port, String password) {
+		objectPool = new JedisPool(getDefaultConfig(), host, port, DEFAULT_SOCKET_TIMEOUT, password);
+	}
+	
 	public ThreadSafeJedis(String host, int port, int timeout) {
-		initializePoolConfig();
-		objectPool = new JedisPool(poolConfig, host, port, timeout);
+		objectPool = new JedisPool(getDefaultConfig(), host, port, timeout);
 	}
 
 	public ThreadSafeJedis(String host, int port, int timeout, String password) {
-		initializePoolConfig();
+		objectPool = new JedisPool(getDefaultConfig(), host, port, timeout, password);
+	}
+	
+	public ThreadSafeJedis(JedisPoolConfig poolConfig, String host, int port) {
+		objectPool = new JedisPool(poolConfig, host, port, DEFAULT_SOCKET_TIMEOUT);
+	}
+
+	public ThreadSafeJedis(JedisPoolConfig poolConfig, String host, int port, int timeout) {
+		objectPool = new JedisPool(poolConfig, host, port, timeout);
+	}
+
+	public ThreadSafeJedis(JedisPoolConfig poolConfig, String host, int port, int timeout, String password) {
 		objectPool = new JedisPool(poolConfig, host, port, timeout, password);
 	}
 
-	public ThreadSafeJedis(URI uri) {
-		objectPool = new JedisPool(uri);
-	}
-
-	public ThreadSafeJedis(URI uri, int timeout) {
-		objectPool = new JedisPool(uri, timeout);
-	}
-
-	private void initializePoolConfig(){
-		//TODO
+	private JedisPoolConfig getDefaultConfig(){
+		JedisPoolConfig poolConfig = new JedisPoolConfig();
+		poolConfig.setMaxTotal(DEFAULT_MAX_CLIENTS);
+		return poolConfig;
 	}
 	
 	public String set(final String key, String value) {
@@ -325,5 +333,11 @@ public class ThreadSafeJedis{
 		return response;
 	}
 
+	public String ping(){
+		Jedis client = objectPool.getResource();
+		String response = client.ping();
+		client.close();
+		return response;
+	}
 
 }
